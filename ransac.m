@@ -1,4 +1,4 @@
-function [bestTranformInLierCount bestTranform refinedMatches] = ransac(fa, da, fb, db)
+function [bestTranformInLierCount bestTranform refinedMatches numMatches] = ransac(fa, da, fb, db)
 warning('off');
 
 % find matching descriptors
@@ -21,7 +21,7 @@ distanceThreshold = 10;
 bestTranformInLierCount = 0 ;
 
 
-for i=1:100
+for i=1:500
     
     %Selecting 3 Random Points for Transformation
     p1 = randi(size(I1Columns,2));
@@ -29,25 +29,25 @@ for i=1:100
     p3 = randi(size(I1Columns,2));
     
     %Computing Transformation Based On The Points Above
-    A = [ I1Columns(1,p1),I1Columns(2,p1),0,0,1,0;
-          0,0,I1Columns(1,p1),I1Columns(2,p1),0,1;
-          I1Columns(1,p2),I1Columns(2,p2),0,0,1,0;
-          0,0,I1Columns(1,p2),I1Columns(2,p2),0,1;
-          I1Columns(1,p3),I1Columns(2,p3),0,0,1,0;
-          0,0,I1Columns(1,p3),I1Columns(2,p3),0,1;];
+    A = [ I1Columns(1,p1),I1Columns(2,p1),0,0,1,0
+          0,0,I1Columns(1,p1),I1Columns(2,p1),0,1
+          I1Columns(1,p2),I1Columns(2,p2),0,0,1,0
+          0,0,I1Columns(1,p2),I1Columns(2,p2),0,1
+          I1Columns(1,p3),I1Columns(2,p3),0,0,1,0
+          0,0,I1Columns(1,p3),I1Columns(2,p3),0,1];
       
     
-    B = [I2Columns(1,p1);
-         I2Columns(2,p1);
-         I2Columns(1,p2);
-         I2Columns(2,p2);
-         I2Columns(1,p3);
-         I2Columns(2,p3);];
+    B = [I2Columns(1,p1)
+         I2Columns(2,p1)
+         I2Columns(1,p2)
+         I2Columns(2,p2)
+         I2Columns(1,p3)
+         I2Columns(2,p3)];
      
     % Finding the transformation matrix
     X = A\B;
     
-    It = [X(1),X(2);
+    It = [X(1),X(2)
           X(3),X(4)] * I1Columns ;
     
     It(1,:)=It(1,:) + X(5);
@@ -79,4 +79,5 @@ for i=1:100
 end
 
 % Showing only inlier
+numMatches = size(matches, 2);
 refinedMatches = matches(:,find(bestInlier>0));

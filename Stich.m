@@ -1,20 +1,24 @@
 function Stich(directory, resize)
     clc
-    directory = 'imageSet1/';
-    resize = 1;
+%     directory = 'imageSet1/';
+%     resize = 1;
 %     directory = 'imageSet2/';
 %     resize = .25;
-%     directory = 'imageSet3/';
-%     resize = .25;
+    directory = 'Abbey/';
+    resize = .75;
 
     %% Read all files and produce initial set of feature points and descriptors
     files = dir([directory '*.jpg']);
     Images = struct('name', [], 'data', [],'gray', [], 'fPoints', [], 'fDesc', []);
     for i = 1 : numel(files)
         Images(i).name = [directory files(i).name];
-        Images(i).data = imresize(imread(Images(i).name), resize);
-        [Images(i).gray Images(i).fPoints Images(i).fDesc] = newImage(Images(i).data);
+%         Images(i).data = imresize(imread(Images(i).name), resize);
+%         [Images(i).gray Images(i).fPoints Images(i).fDesc] = newImage(Images(i).data);
+        data = imresize(imread(Images(i).name), resize);
+        [gray Images(i).fPoints Images(i).fDesc] = newImage(data);
     end
+    data = [];
+    gray = [];
 
     %% Stich images until no more pairs are left
     numImages = length(Images);
@@ -26,6 +30,7 @@ function Stich(directory, resize)
         %% use the first match (highest correspondence to another image)
         imageIndex1 = bestMatch(1).image;
         imageIndex2 = bestMatch(1).bestMatch;
+
         % check if we found an appropriate match
         if (imageIndex2 > 0)
             fprintf('Stiching images "%s" and "%s"\n',...
@@ -33,6 +38,12 @@ function Stich(directory, resize)
 %             bestTranformInLierCount = bestMatch(1).bestTranformInLierCount
 %             bestTranform = bestMatch(1).bestTranform
             refinedMatches = bestMatch(1).refinedMatches
+            if (isempty(Images(imageIndex1).data))
+                Images(imageIndex1).data = imresize(imread(Images(imageIndex1).name), resize);
+            end
+            if (isempty(Images(imageIndex2).data))
+                Images(imageIndex2).data = imresize(imread(Images(imageIndex2).name), resize);
+            end
             [canvas1 canvas2] = merge(Images, imageIndex1, imageIndex2, refinedMatches);
             combImage = blend(canvas1, canvas2);
             
@@ -74,14 +85,19 @@ function [gray fPoints fDesc] = newImage(data)
 % have good correspondences in terms of descriptor matches after RANSAC.
 %
 function bestMatch = bestmatches(Images)
-    bestMatch = struct('bestMatch', 0, 'image', 0, 'count', 0,...
+    bestMatch = struct('bestMatch', 0, 'image', 0, 'count', 0, 'numMatches', 0,...
         'bestTranformInLierCount', [], 'bestTranform', [],...
         'refinedMatches' ,[]);
+    pm1 = 0.000001;
+    pm0 = 1 - pm1;
+    pMin = 0.999;
+    alpha = 8;
+    beta = 0.3;
     for i = 1:length(Images) - 1
         bestMatch(i).image = i;
         bestMatch(i).count = 0;
         for j = i + 1:length(Images)
-            [bestTranformInLierCount bestTranform refinedMatches] = ransac( ...
+            [bestTranformInLierCount bestTranform refinedMatches numMatches] = ransac( ...
                 Images(i).fPoints, Images(i).fDesc ...
                 ,Images(j).fPoints, Images(j).fDesc ...
             );
@@ -89,9 +105,17 @@ function bestMatch = bestmatches(Images)
                 bestMatch(i).bestMatch = j;
                 bestMatch(i).count = bestTranformInLierCount;
                 bestMatch(i).bestTranformInLierCount = bestTranformInLierCount;
+                bestMatch(i).numMatches = numMatches;
                 bestMatch(i).bestTranform = bestTranform;
                 bestMatch(i).refinedMatches = refinedMatches;
             end
+        end
+%                 pf1 = prob(bestTranformInLierCount, numMatches, p1) * pm1;
+%                 pf0 = prob(bestTranformInLierCount, numMatches, p0) * pm0;
+        bestTranformInLierCount = bestMatch(i).bestTranformInLierCount
+        threshold = alpha + beta * bestMatch(i).numMatches
+        if (bestTranformInLierCount < threshold)
+            bestMatch(i).bestMatch = 0;
         end
     end
     
@@ -108,3 +132,11 @@ function image = blend(canvas1, canvas2)
 %             combImage = uint8(zeros(imgSizeX, imgSizeY, size(images(imageIndex1).data, 3)));
     image = imadd(canvassub,canvas2);
 
+function B = prob(x, n, p)
+    nFac = factorial(n);
+    xFac = factorial(x);
+    nx = n - x;
+    nxFac = factorial(nx);
+    pPow = p^x;
+    p1Pow = (1 - p)^(nx);
+    B = (nFac / (xFac * nxFac)) * pPow * p1Pow;
