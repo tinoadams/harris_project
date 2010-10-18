@@ -1,11 +1,11 @@
 function Stich(directory, resize)
     clc
-%     directory = 'imageSet1/';
-%     resize = 1;
+    directory = 'imageSet1/';
+    resize = 1;
 %     directory = 'imageSet2/';
 %     resize = .25;
-    directory = 'Abbey/';
-    resize = .75;
+%     directory = 'Abbey/';
+%     resize = .75;
 
     %% Read all files and produce initial set of feature points and descriptors
     files = dir([directory '*.jpg']);
@@ -91,16 +91,24 @@ function bestMatch = bestmatches(Images)
     pm1 = 0.000001;
     pm0 = 1 - pm1;
     pMin = 0.999;
+    min = 1 / ((1 / pMin) - 1)
+    p1 = 0.6
+    p0 = 0.1;
+
     alpha = 8;
     beta = 0.3;
+    %% Match each image with the following images in the set and record the
+    %% best corresponding image in terms of feature matches after RANSAC.
     for i = 1:length(Images) - 1
         bestMatch(i).image = i;
         bestMatch(i).count = 0;
         for j = i + 1:length(Images)
+            %% Match features and find RANSAC inliners
             [bestTranformInLierCount bestTranform refinedMatches numMatches] = ransac( ...
                 Images(i).fPoints, Images(i).fDesc ...
                 ,Images(j).fPoints, Images(j).fDesc ...
             );
+            %% Update the best match if we found a better correspondence
             if (bestTranformInLierCount > bestMatch(i).count)
                 bestMatch(i).bestMatch = j;
                 bestMatch(i).count = bestTranformInLierCount;
@@ -110,11 +118,14 @@ function bestMatch = bestmatches(Images)
                 bestMatch(i).refinedMatches = refinedMatches;
             end
         end
-%                 pf1 = prob(bestTranformInLierCount, numMatches, p1) * pm1;
-%                 pf0 = prob(bestTranformInLierCount, numMatches, p0) * pm0;
+        pf1 = prob(bestTranformInLierCount, numMatches, p1) * pm1;
+        pf0 = prob(bestTranformInLierCount, numMatches, p0) * pm0;
+        pf1 / pf0
         bestTranformInLierCount = bestMatch(i).bestTranformInLierCount
         threshold = alpha + beta * bestMatch(i).numMatches
         if (bestTranformInLierCount < threshold)
+            fprintf('Dismiss match based on low probability "%s" -> "%s"\n',...
+                Images(i).name, bestMatch(i).bestMatch);
             bestMatch(i).bestMatch = 0;
         end
     end
