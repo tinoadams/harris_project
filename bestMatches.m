@@ -3,6 +3,7 @@
 % have good correspondences in terms of descriptor matches after RANSAC.
 %
 function bestMatch = bestMatches(Images)
+    % structure that is returned
     bestMatch = struct('bestMatch', 0, 'image', 0, 'count', 0, 'numMatches', 0,...
         'bestTranformInLierCount', [], 'bestTranform', [],...
         'refinedMatches' ,[]);
@@ -33,7 +34,7 @@ function bestMatch = bestMatches(Images)
         %% Determine how probable the match is
         threshold = alpha + beta * bestMatch(i).numMatches;
         if (bestMatch(i).bestTranformInLierCount < threshold)
-            fprintf('Dismiss match based on low probability (%d / %f10) "%s" -> "%s"\n',...
+            fprintf('Dismiss match based on low probability (%d / %f) "%s" -> "%s"\n',...
                 bestMatch(i).bestTranformInLierCount, threshold,...
                 Images(i).name, Images(bestMatch(i).bestMatch).name);
             bestMatch(i).bestMatch = 0;
