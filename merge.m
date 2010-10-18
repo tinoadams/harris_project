@@ -4,7 +4,7 @@
 % the second image.
 %
 function [canvas1 canvas2] = merge(Images, imageIndex1, imageIndex2, refinedMatches)
-    % extract needed information for the two image to be merged
+    %% extract needed information for the two image to be merged
     im1 = Images(imageIndex1).data;
     fa = Images(imageIndex1).fPoints;
     da = Images(imageIndex1).fDesc;
@@ -12,9 +12,12 @@ function [canvas1 canvas2] = merge(Images, imageIndex1, imageIndex2, refinedMatc
     fb = Images(imageIndex2).fPoints;
     db = Images(imageIndex2).fDesc;
 
-%     figure, plotmatches(Images(imageIndex1).gray, Images(imageIndex2).gray, fa, fb, refinedMatches);
+    %% plot matches when a gray scale image is given, check Stich.m
+    if ~isempty(Images(imageIndex1).gray)
+        figure, plotmatches(Images(imageIndex1).gray, Images(imageIndex2).gray, fa, fb, refinedMatches);
+    end
 
-    % transform the first image to fit into the second one
+    %% transform the first image to fit into the second one
     xa_refinedMatches = fa(1, refinedMatches(1, :))';
     ya_refinedMatches = fa(2, refinedMatches(1, :))';
     xb_refinedMatches = fb(1, refinedMatches(2, :))';
@@ -25,11 +28,9 @@ function [canvas1 canvas2] = merge(Images, imageIndex1, imageIndex2, refinedMatc
 %     tform = cp2tform(input_points, base_points, 'affine');
     tform = cp2tform(input_points, base_points, 'projective');
 %     tform = cp2tform(input_points, base_points, 'polynomial');
-
     [trans xdata ydata] = imtransform(im1, tform);
 
-    % merge the two images
-
+    %% merge the two images
     [n o b] = size(trans);
     [l m z] = size(im2);
     if(xdata(1)<0)
